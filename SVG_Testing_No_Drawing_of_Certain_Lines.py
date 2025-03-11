@@ -49,6 +49,7 @@ def figure_out_specs(total_edge_length, num_of_peaks):
     global last_peak_length
     global num_of_nodes_needed_on_each_side
     global max_design_size
+    global node_width
     num_long_lines = num_of_peaks + 1
     num_short_lines = num_of_peaks
     num_of_diagonals = num_of_peaks * 2
@@ -116,25 +117,17 @@ def draw_channel(side_node_is_being_drawn_on, going_up_node, x_coor, y_coor):
     # Calculate the number of spacing units necessary
     spacing_units_necessary = (num_of_nodes_needed_on_each_side[side_node_is_being_drawn_on] - (0 if is_num_of_nodes_even else 1)) / 2
     # Calcualte the minimum channel length to clear other nearby electrodes
-    min_channel_length = total_edge_length if side_node_is_being_drawn_on in [1, 3] else ((y_coor * total_edge_length + 5) if side_node_is_being_drawn_on == 0 else ((len(grid) - y_coor - 1) * total_edge_length + 5))
+    relevant_coor = y_coor if side_node_is_being_drawn_on in [0, 2] else x_coor
+    min_channel_length = round(total_edge_length/2) if side_node_is_being_drawn_on in [1, 3] else ((relevant_coor * total_edge_length + 5) if side_node_is_being_drawn_on == 0 else ((len(grid) - relevant_coor - 1) * total_edge_length + 5))
     
     node_coor = math.ceil(nodes_counter[side_node_is_being_drawn_on])
-    print("node_coor: ", node_coor)
     distance_from_middle = (node_coor-spacing_units_necessary+1) if ((is_num_of_nodes_even) and ((node_coor-spacing_units_necessary) >= 0)) else (node_coor-spacing_units_necessary)
     inverted_distance_from_middle = 1 + spacing_units_necessary - abs(distance_from_middle)
     # Calculate a value between 0 and 0.5 using the distance between the node and the middle
     distance_from_middle_normalised = (abs(inverted_distance_from_middle) / (spacing_units_necessary)*(0.5))
     # Calculate the length of the first part of the channel
-    first_distance = min_channel_length + (total_edge_length+15)*(inverted_distance_from_middle-0.5)
-    # Move forward the right amount
-    if distance_from_middle == 0:
-        t.forward(first_distance - round(node_width/3))
-    elif (distance_from_middle < 0 and side_node_is_being_drawn_on in [0, 1]) or (distance_from_middle > 0 and side_node_is_being_drawn_on in [2,3]):
-        # Draw the first part of the channel
-        t.forward(first_distance - round(node_channel_width_fraction*total_edge_length)) if going_up_node else t.forward(channel_end_length)
-    else:
-        # Draw the first part of the channel
-        t.forward(first_distance) if going_up_node else t.forward(channel_end_length + round(node_channel_width_fraction*total_edge_length))
+    calc_channel_length = min_channel_length + (node_width+15)*(inverted_distance_from_middle-0.5) + round(node_width/2)
+
     # Determine which way to turn
     if distance_from_middle == 0:
         rotation = 0
@@ -142,20 +135,26 @@ def draw_channel(side_node_is_being_drawn_on, going_up_node, x_coor, y_coor):
         rotation = 90 if side_node_is_being_drawn_on in [0, 1] else -90
     else:
         rotation = -90 if side_node_is_being_drawn_on in [0, 1] else 90
-    t.left(rotation)            
+
+    # Move sideways if drawing the channel back from the node to the electrode
+    if distance_from_middle != 0 and not going_up_node:
+        t.forward(channel_end_length + round(node_channel_width_fraction*total_edge_length)) if ((distance_from_middle < 0 and side_node_is_being_drawn_on in [0, 1]) or (distance_from_middle > 0 and side_node_is_being_drawn_on in [2,3])) else t.forward(channel_end_length)
+        t.left(rotation*-1)
+
+    # Move forward the right amount
+    if distance_from_middle == 0:
+        t.forward(calc_channel_length - round(node_width/3))
+    elif (distance_from_middle < 0 and side_node_is_being_drawn_on in [0, 1]) or (distance_from_middle > 0 and side_node_is_being_drawn_on in [2,3]):
+        # Draw the first part of the channel
+        t.forward(calc_channel_length - round(node_channel_width_fraction*total_edge_length)) if going_up_node else t.forward(calc_channel_length)
+    else:
+        # Draw the first part of the channel
+        t.forward(calc_channel_length) if going_up_node else t.forward(calc_channel_length - round(node_channel_width_fraction*total_edge_length))            
 
     # Move sideways an appropriate amount
-    if distance_from_middle != 0: 
-        t.forward(total_edge_length + 5)
-
-    # Continue upwards/downwards to the node
-    t.left(rotation*-1)
-    if distance_from_middle == 0:
-        pass
-    elif (distance_from_middle < 0 and side_node_is_being_drawn_on in [0, 1]) or (distance_from_middle > 0 and side_node_is_being_drawn_on in [2, 3]):
-        t.forward(channel_end_length + round(node_channel_width_fraction*total_edge_length)) if going_up_node else t.forward(first_distance)
-    else:
-        t.forward(channel_end_length) if going_up_node else t.forward(first_distance - round(node_channel_width_fraction*total_edge_length))
+    if distance_from_middle != 0 and going_up_node:
+        t.left(rotation)
+        t.forward(channel_end_length) if ((distance_from_middle < 0 and side_node_is_being_drawn_on in [0, 1]) or (distance_from_middle > 0 and side_node_is_being_drawn_on in [2,3])) else t.forward(channel_end_length + round(node_channel_width_fraction*total_edge_length))
 
 def draw_attached_node(side_being_draw_on, x, y):
     # TODO: MAKE THIS THICKER
@@ -295,4 +294,4 @@ draw_grid()
 turtle.done()
 
 # Export to SVG
-t.save_as("Test_Results/NextStageTesting1.svg")
+# t.save_as("Test_Results/NextStageTesting1.svg")
