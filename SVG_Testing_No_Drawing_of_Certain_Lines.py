@@ -4,20 +4,38 @@ import math
 
 # IMPORTANT
 # CONFIGURE KEY VALUES HERE
-gap_width = 0.027
-total_edge_length = 50
-num_of_peaks = 4
-node_channel_width_fraction = 0.3 # Percentage of electrode edge length
+# gap_width = 0.027
+# total_edge_length = 50
+# num_of_peaks = 4
+# node_channel_width_fraction = 0.3 # Percentage of electrode edge length
+# channel_straight = False
+# channel_gap_width = 1
+# channel_length = 150
+# channel_end_length = 20
+# node_width = 65
+# safeguard_width = 8
+# starting_coor = [-200, 100]
+# grid = [[True, False, False, False, False, False, False, True],
+#         [True, True, True, True, True, True, True, True],
+#         [True, True, True, True, True, True, True, True],
+#         [True, False, False, False, False, False, False, True],
+#         [True, False, False, False, False, False, False, True]]
+
+gap_width = 3
+total_edge_length = 75
+num_of_peaks = 5
+node_channel_width_fraction = 0.25 # Percentage of electrode edge length
 channel_straight = False
+channel_gap_width = 5
 channel_length = 150
-channel_end_length = 10
-node_width = 65
+channel_end_length = 20
+node_width = 90
+safeguard_width = 8
 starting_coor = [-200, 100]
-grid = [[True, False, False, False, False, False, False, True],
-        [True, True, True, True, True, True, True, True],
-        [True, True, True, True, True, True, True, True],
-        [True, False, False, False, False, False, False, True],
-        [True, False, False, False, False, False, False, True]]
+grid = [[True, False, True],
+        [True, True, True],
+        [True, True, True],
+        [True, True, True]]
 
 # GLOBALS
 nodes_counter = [-1, -1, -1, -1]
@@ -105,6 +123,9 @@ def draw_normal_edge():
     draw_peak(False, True)
 
 def draw_channel(side_node_is_being_drawn_on, going_up_node, x_coor, y_coor):
+    # Make the channel gap width larger
+    t.width(channel_gap_width)
+    
     # Check if the channel is straight and if so draw it and return
     if channel_straight:
         t.forward(channel_length)
@@ -118,13 +139,13 @@ def draw_channel(side_node_is_being_drawn_on, going_up_node, x_coor, y_coor):
     spacing_units_necessary = (num_of_nodes_needed_on_each_side[side_node_is_being_drawn_on] - (0 if is_num_of_nodes_even else 1)) / 2
     # Calcualte the minimum channel length to clear other nearby electrodes
     relevant_coor = y_coor if side_node_is_being_drawn_on in [0, 2] else x_coor
-    min_channel_length = round(total_edge_length/2) if side_node_is_being_drawn_on in [1, 3] else ((relevant_coor * total_edge_length + 5) if side_node_is_being_drawn_on == 0 else ((len(grid) - relevant_coor - 1) * total_edge_length + 5))
+    min_channel_length = round(total_edge_length/3) if side_node_is_being_drawn_on in [1, 3] else ((relevant_coor * total_edge_length + 5) if side_node_is_being_drawn_on == 0 else ((len(grid) - relevant_coor - 1) * total_edge_length + 5))
     
     node_coor = math.ceil(nodes_counter[side_node_is_being_drawn_on])
     distance_from_middle = (node_coor-spacing_units_necessary+1) if ((is_num_of_nodes_even) and ((node_coor-spacing_units_necessary) >= 0)) else (node_coor-spacing_units_necessary)
     inverted_distance_from_middle = 1 + spacing_units_necessary - abs(distance_from_middle)
     # Calculate a value between 0 and 0.5 using the distance between the node and the middle
-    distance_from_middle_normalised = (abs(inverted_distance_from_middle) / (spacing_units_necessary)*(0.5))
+    # distance_from_middle_normalised = (abs(inverted_distance_from_middle) / (spacing_units_necessary)*(0.5))
     # Calculate the length of the first part of the channel
     calc_channel_length = min_channel_length + (node_width+15)*(inverted_distance_from_middle-0.5) + round(node_width/2)
 
@@ -143,7 +164,7 @@ def draw_channel(side_node_is_being_drawn_on, going_up_node, x_coor, y_coor):
 
     # Move forward the right amount
     if distance_from_middle == 0:
-        t.forward(calc_channel_length - round(node_width/3))
+        t.forward(calc_channel_length - round(node_width/2))
     elif (distance_from_middle < 0 and side_node_is_being_drawn_on in [0, 1]) or (distance_from_middle > 0 and side_node_is_being_drawn_on in [2,3]):
         # Draw the first part of the channel
         t.forward(calc_channel_length - round(node_channel_width_fraction*total_edge_length)) if going_up_node else t.forward(calc_channel_length)
@@ -156,8 +177,10 @@ def draw_channel(side_node_is_being_drawn_on, going_up_node, x_coor, y_coor):
         t.left(rotation)
         t.forward(channel_end_length) if ((distance_from_middle < 0 and side_node_is_being_drawn_on in [0, 1]) or (distance_from_middle > 0 and side_node_is_being_drawn_on in [2,3])) else t.forward(channel_end_length + round(node_channel_width_fraction*total_edge_length))
 
+    # Reset the width of the pen
+    t.width(gap_width)
+
 def draw_attached_node(side_being_draw_on, x, y):
-    # TODO: MAKE THIS THICKER
     # Calculate the length of the spacers that are not part of the channel
     base_short_near_gap_line_length = (node_width - node_channel_width_fraction*total_edge_length)/2
     
@@ -166,14 +189,40 @@ def draw_attached_node(side_being_draw_on, x, y):
     # Draw the channel up to the node
     draw_channel(side_being_draw_on, True, x, y)
 
-    # Draw the node
+    # Draw the node (thick with safegaurd)
+    # Position the turtle cursor in the right position for stamping
     t.left(90)
-    t.forward(base_short_near_gap_line_length)
+    t.penup()
+    t.forward(safeguard_width/2)
+    t.pendown()
+
+    # Preare the shape and size of the turtle cursor to stamp the safeegaurd
+    t.shape("square")
+    t.shapesize((safeguard_width/20), (safeguard_width/20))
+
+    for point in range(int(base_short_near_gap_line_length - round(safeguard_width/2))):
+        t.stamp()
+        t.forward(1)
+
     for edge in range(3):
         t.right(90)
-        t.forward(node_width)
+        for point in range(int(node_width)):
+            t.stamp()
+            t.forward(1)
+
     t.right(90)
-    t.forward(base_short_near_gap_line_length)
+    for point in range(int(base_short_near_gap_line_length - round(safeguard_width/2)) + 1):
+        t.stamp()
+        t.forward(1)
+    
+    # Revert the shape and size of the turtle cusor
+    t.shape("classic")
+    t.shapesize(1, 1)
+
+    # Reposition and rotate the turtle cursor to the correct position and orrientation to continue drawing the channel
+    t.penup()
+    t.forward(safeguard_width/2 - 1)
+    t.pendown()
 
     t.left(90)
 
@@ -181,9 +230,6 @@ def draw_attached_node(side_being_draw_on, x, y):
     draw_channel(side_being_draw_on, False, x, y)
     # Return to the electrode and reset the heading
     t.left(90)
-
-    # TODO: MAKE THIS THIN AGAIN
-    # t.width(gap_width)
 
 def draw_node_edge(side_edge_is_on, x, y):
     # Draw first peak
@@ -234,15 +280,30 @@ def identify_edges_to_ignore(x_coor, y_coor):
     return edges_to_ignore
 
 # Function to identify which edge to attach the node to
-def identify_edge_to_attach_node_to(x, y, edges_to_ignore):
+def identify_edge_to_attach_node_to(x, y):
     if x == 0:
         return 3
     elif x == (len(grid[y]) - 1):
         return 1
-    elif 0 in edges_to_ignore:
+    elif y == len(grid):
         return 2
-    else:
+    elif y == 0:
         return 0
+    else:
+        electrode_above = False
+        electrode_below = False
+        for y_electrode_space_to_check in range(len(grid)):
+            if grid[y_electrode_space_to_check][x] and y_electrode_space_to_check!= y:
+                if y_electrode_space_to_check < y:
+                    electrode_above = True
+                else:
+                    electrode_below = True
+        if not electrode_above:
+            return 0
+        elif not electrode_below:
+            return 2
+        else:
+            return -1
 
 # Function to count the number of nodes needed on each side of the grid
 def count_number_of_nodes_needed_on_each_side():
@@ -250,7 +311,8 @@ def count_number_of_nodes_needed_on_each_side():
     for y in range(len(grid)):
         for x in range(len(grid[y])):
             if grid[y][x]:
-                nodes_needed_on_each_side[identify_edge_to_attach_node_to(x, y, identify_edges_to_ignore(x, y))] += 1
+                if identify_edge_to_attach_node_to(x, y) != -1:
+                    nodes_needed_on_each_side[identify_edge_to_attach_node_to(x, y)] += 1
     return nodes_needed_on_each_side
 
 def place_and_draw_electrode(x_coor, y_coor):
@@ -269,7 +331,7 @@ def place_and_draw_electrode(x_coor, y_coor):
     t.pendown()
 
     # Draw the electrode
-    draw_electrode(edges_to_ignore, identify_edge_to_attach_node_to(x_coor, y_coor, edges_to_ignore), x_coor, y_coor)
+    draw_electrode(edges_to_ignore, identify_edge_to_attach_node_to(x_coor, y_coor), x_coor, y_coor)
 
 def draw_safety_border_around_bases(first_base, last_base):
     if first_base:
