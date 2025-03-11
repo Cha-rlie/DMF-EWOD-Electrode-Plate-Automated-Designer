@@ -116,7 +116,7 @@ def draw_channel(side_node_is_being_drawn_on, going_up_node, x_coor, y_coor):
     # Calculate the number of spacing units necessary
     spacing_units_necessary = (num_of_nodes_needed_on_each_side[side_node_is_being_drawn_on] - (0 if is_num_of_nodes_even else 1)) / 2
     # Calcualte the minimum channel length to clear other nearby electrodes
-    min_channel_length = total_edge_length if side_node_is_being_drawn_on in [1, 3] else ((y_coor * total_edge_length + 10) if side_node_is_being_drawn_on == 0 else ((len(grid) - y_coor - 1) * total_edge_length + 10))
+    min_channel_length = total_edge_length if side_node_is_being_drawn_on in [1, 3] else ((y_coor * total_edge_length + 5) if side_node_is_being_drawn_on == 0 else ((len(grid) - y_coor - 1) * total_edge_length + 5))
     
     node_coor = math.ceil(nodes_counter[side_node_is_being_drawn_on])
     print("node_coor: ", node_coor)
@@ -127,7 +127,9 @@ def draw_channel(side_node_is_being_drawn_on, going_up_node, x_coor, y_coor):
     # Calculate the length of the first part of the channel
     first_distance = min_channel_length + (total_edge_length+15)*(inverted_distance_from_middle-0.5)
     # Move forward the right amount
-    if (distance_from_middle < 0 and side_node_is_being_drawn_on in [0, 1]) or (distance_from_middle > 0 and side_node_is_being_drawn_on in [2,3]):
+    if distance_from_middle == 0:
+        t.forward(first_distance - round(node_width/3))
+    elif (distance_from_middle < 0 and side_node_is_being_drawn_on in [0, 1]) or (distance_from_middle > 0 and side_node_is_being_drawn_on in [2,3]):
         # Draw the first part of the channel
         t.forward(first_distance - round(node_channel_width_fraction*total_edge_length)) if going_up_node else t.forward(channel_end_length)
     else:
@@ -143,11 +145,14 @@ def draw_channel(side_node_is_being_drawn_on, going_up_node, x_coor, y_coor):
     t.left(rotation)            
 
     # Move sideways an appropriate amount
-    if distance_from_middle != 0: t.forward(total_edge_length + 5)
+    if distance_from_middle != 0: 
+        t.forward(total_edge_length + 5)
 
-    # Continue upwards to the node
+    # Continue upwards/downwards to the node
     t.left(rotation*-1)
-    if (distance_from_middle < 0 and side_node_is_being_drawn_on in [0, 1]) or (distance_from_middle > 0 and side_node_is_being_drawn_on in [2, 3]):
+    if distance_from_middle == 0:
+        pass
+    elif (distance_from_middle < 0 and side_node_is_being_drawn_on in [0, 1]) or (distance_from_middle > 0 and side_node_is_being_drawn_on in [2, 3]):
         t.forward(channel_end_length + round(node_channel_width_fraction*total_edge_length)) if going_up_node else t.forward(first_distance)
     else:
         t.forward(channel_end_length) if going_up_node else t.forward(first_distance - round(node_channel_width_fraction*total_edge_length))
